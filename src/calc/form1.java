@@ -15,23 +15,53 @@ public class form1 {
     public static void main(String[] args) {
         JFrame frame = new JFrame("calc");
         frame.setContentPane(new form1().panel1);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.pack();
         frame.setVisible(true);
     }
 
+    /**
+     * Обработчик клика по кнопке
+     */
     public form1() {
-        button1.addActionListener(e -> {
+        button1.addActionListener((ActionEvent e) -> {
             if  (!numCheck(textField1.getText()) || !numCheck(textField2.getText())) {
                 textField3.setText("Ошибка входных данных");
                 java.awt.Toolkit.getDefaultToolkit().beep();
-            } else{ float a = Float.parseFloat(textField1.getText());
-                float b = Float.parseFloat(textField2.getText());
-                textField3.setText(Float.toString(a / b)); }
+            } else
+            division(Float.parseFloat(textField1.getText()), Float.parseFloat(textField2.getText()));
+            if(resCheck(textField3.getText())){
+                textField3.setText("Делить на ноль нельзя");
+                java.awt.Toolkit.getDefaultToolkit().beep();}
         });
     }
 
-    public static Boolean numCheck(String symbol) {
+    /**
+     * Деление a на b, и вывод в поле реультата
+     * @param a делимое
+     * @param b делитель
+     * @return результат деления
+     */
+    public float division(float a, float b){
+        textField3.setText(Float.toString(a / b));
+        return a/b;
+    }
+
+    /**
+     * Проверка деления на ноль или нуля на ноль
+     * @param res выведенный в поле результат деления
+     * @return содержит ли сторка данный текст
+     */
+    public  static  Boolean resCheck(String res) {
+        return  res.contains("nfi") || res.contains("NaN");
+    }
+
+    /**
+     *  Проверка, что введено число
+     * @param symbol введеный в поле текст
+     * @return результат проверки
+     */
+    private static Boolean numCheck(String symbol) {
         return symbol.matches("([-+])?\\d*\\.?\\d+");
     }
 }
