@@ -2,7 +2,6 @@ package calc;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 
 public class form1 {
@@ -52,7 +51,7 @@ public class form1 {
      * @param res выведенный в поле результат деления
      * @return содержит ли сторка данный текст
      */
-    public  static  Boolean resCheck(String res) {
+    private static  Boolean resCheck(String res) {
         return  res.contains("nfi") || res.contains("NaN");
     }
 
