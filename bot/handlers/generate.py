@@ -13,7 +13,8 @@ from keyboards.inline import cancel_keyboard, main_menu_keyboard
 from services import credits as credit_svc
 from services.image_backend import ImageBackend
 from services.subscriptions import get_generation_cost
-from utils.formatting import format_balance, format_generation_result
+from utils.formatting import format_generation_result
+from utils.telegram import edit_or_send
 
 router = Router(name="generate")
 
@@ -103,13 +104,20 @@ async def cmd_generate(
         return
 
     fresh = await queries.get_user(db, user["user_id"])
-    await status_msg.delete()
-    await message.answer_photo(
-        photo=BufferedInputFile(image_bytes, filename="image.jpg"),
-        caption=f"🎨 <i>{prompt[:200]}</i>\n\n{format_generation_result(fresh['credits'])}",
-        reply_markup=main_menu_keyboard(),
-    )
+    try:
+        await message.answer_photo(
+            photo=BufferedInputFile(image_bytes, filename="image.jpg"),
+            caption=f"🎨 <i>{prompt[:200]}</i>\n\n{format_generation_result(fresh['credits'])}",
+            reply_markup=main_menu_keyboard(),
+        )
+    except Exception:
+        await credit_svc.refund(db, user["user_id"], cost, "refund:delivery_failed")
+        await queries.log_generation(
+            db, user["user_id"], prompt, backend_name, "delivery_failed", None, cost
+        )
+        return
 
+    await status_msg.delete()
     await queries.log_generation(
         db, user["user_id"], prompt, backend_name, "success", None, cost
     )
@@ -117,7 +125,8 @@ async def cmd_generate(
 
 @router.callback_query(lambda c: c.data == "open_generate")
 async def cb_open_generate(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(  # type: ignore[union-attr]
+    await edit_or_send(
+        callback,
         "🎨 <b>Генерация изображений</b>\n\n"
         "Отправьте команду с промптом:\n"
         "<code>/gen ваш промпт на английском</code>\n\n"

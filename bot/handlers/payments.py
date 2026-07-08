@@ -21,6 +21,7 @@ from services.subscriptions import (
     get_sub_by_id,
 )
 from utils.formatting import format_balance, tiers_info_text
+from utils.telegram import edit_or_send
 
 router = Router(name="payments")
 
@@ -47,7 +48,8 @@ async def cmd_subscribe(message: Message) -> None:
 
 @router.callback_query(lambda c: c.data == "open_buy")
 async def cb_open_buy(callback: CallbackQuery, user: aiosqlite.Row) -> None:
-    await callback.message.edit_text(  # type: ignore[union-attr]
+    await edit_or_send(
+        callback,
         f"🛒 <b>Купить кредиты</b>\n\n"
         f"{format_balance(user)}\n\n"
         "Выберите пакет кредитов:",
@@ -58,7 +60,8 @@ async def cb_open_buy(callback: CallbackQuery, user: aiosqlite.Row) -> None:
 
 @router.callback_query(lambda c: c.data == "open_subscribe")
 async def cb_open_subscribe(callback: CallbackQuery) -> None:
-    await callback.message.edit_text(  # type: ignore[union-attr]
+    await edit_or_send(
+        callback,
         f"💎 <b>Подписки</b>\n\n"
         f"{tiers_info_text()}\n"
         "Выберите подписку:",

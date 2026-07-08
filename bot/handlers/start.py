@@ -9,6 +9,7 @@ from db import queries
 from keyboards.inline import main_menu_keyboard, tos_keyboard
 from middlewares.tos_gate import TOS_TEXT
 from utils.formatting import format_balance
+from utils.telegram import edit_or_send
 
 router = Router(name="start")
 
@@ -50,7 +51,8 @@ async def cmd_help(message: Message) -> None:
 
 @router.callback_query(lambda c: c.data == "back_main")
 async def cb_back_main(callback: CallbackQuery, user: aiosqlite.Row) -> None:
-    await callback.message.edit_text(  # type: ignore[union-attr]
+    await edit_or_send(
+        callback,
         f"{format_balance(user)}\n\nВыберите действие:",
         reply_markup=main_menu_keyboard(),
     )
@@ -60,7 +62,8 @@ async def cb_back_main(callback: CallbackQuery, user: aiosqlite.Row) -> None:
 @router.callback_query(lambda c: c.data == "show_balance")
 async def cb_show_balance(callback: CallbackQuery, user: aiosqlite.Row, db: aiosqlite.Connection) -> None:
     fresh = await queries.get_user(db, user["user_id"])
-    await callback.message.edit_text(  # type: ignore[union-attr]
+    await edit_or_send(
+        callback,
         f"{format_balance(fresh)}\n\nВыберите действие:",
         reply_markup=main_menu_keyboard(),
     )

@@ -158,17 +158,19 @@ async def get_generation_count(
 async def refresh_daily_credits(
     db: aiosqlite.Connection, user_id: int, amount: int
 ) -> bool:
+    # Single guarded UPDATE: concurrent updates from the same user (aiogram
+    # handles updates as parallel tasks) must not grant the bonus twice.
     today = date.today().isoformat()
     cursor = await db.execute(
-        "SELECT last_daily_refresh FROM users WHERE user_id = ?", (user_id,)
+        """
+        UPDATE users SET credits = credits + ?, last_daily_refresh = ?
+        WHERE user_id = ? AND (last_daily_refresh IS NULL OR last_daily_refresh <> ?)
+        """,
+        (amount, today, user_id, today),
     )
-    row = await cursor.fetchone()
-    if row and row["last_daily_refresh"] == today:
+    if cursor.rowcount != 1:
+        await db.commit()
         return False
-    await db.execute(
-        "UPDATE users SET credits = credits + ?, last_daily_refresh = ? WHERE user_id = ?",
-        (amount, today, user_id),
-    )
     await db.execute(
         "INSERT INTO transactions (user_id, delta, reason) VALUES (?, ?, ?)",
         (user_id, amount, "daily_refresh"),
