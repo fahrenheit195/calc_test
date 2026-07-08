@@ -40,9 +40,12 @@ async def main() -> None:
     dp["db"] = db
     dp["image_backend"] = image_backend
 
+    # UserLoader sees every update type; RateLimit and ToSGate are bound to
+    # the concrete observers so `event` is a Message/CallbackQuery, not Update.
     dp.update.middleware(UserLoaderMiddleware())
-    dp.update.middleware(RateLimitMiddleware())
-    dp.update.middleware(ToSGateMiddleware())
+    dp.message.middleware(RateLimitMiddleware())
+    dp.message.middleware(ToSGateMiddleware())
+    dp.callback_query.middleware(ToSGateMiddleware())
 
     dp.include_router(tos.router)
     dp.include_router(start.router)

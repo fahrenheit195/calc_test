@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from io import BytesIO
+import re
 
 import aiosqlite
 from aiogram import Router
@@ -17,15 +17,19 @@ from utils.formatting import format_balance, format_generation_result
 
 router = Router(name="generate")
 
-PROMPT_BANNED_WORDS = frozenset({
-    "child", "minor", "underage", "teen", "kid", "лет", "несовершеннолетн",
-    "ребён", "ребен", "подростк",
-})
+# English terms match on word boundaries; Russian entries are word stems
+# (matched as substrings) so inflected forms are caught without false
+# positives like "лет" matching "летом"/"полёт".
+_BANNED_RE = re.compile(
+    r"\b(child|children|minor|minors|underage|teen|teens|teenager|loli|shota"
+    r"|kid|kids|schoolgirl|schoolboy|toddler|infant|preteen)\b"
+    r"|несовершеннолет|малолет|школьниц|школьник|ребён|ребен|подрост|младен",
+    re.IGNORECASE,
+)
 
 
 def _prompt_safe(prompt: str) -> bool:
-    lower = prompt.lower()
-    return not any(word in lower for word in PROMPT_BANNED_WORDS)
+    return _BANNED_RE.search(prompt) is None
 
 
 @router.message(Command(commands=["gen", "generate"]))
@@ -65,6 +69,7 @@ async def cmd_generate(
         return
 
     status_msg = await message.answer("⏳ Генерирую изображение...")
+    backend_name = image_backend.__class__.__name__.replace("Backend", "").lower()
 
     ok = await credit_svc.check_and_deduct(db, user["user_id"], cost)
     if not ok:
@@ -84,16 +89,16 @@ async def cmd_generate(
             "⏰ Время ожидания истекло. Кредиты возвращены. Попробуйте позже."
         )
         await queries.log_generation(
-            db, user["user_id"], prompt, "unknown", "timeout", None, cost
+            db, user["user_id"], prompt, backend_name, "timeout", None, cost
         )
         return
-    except Exception as e:
+    except Exception:
         await credit_svc.refund(db, user["user_id"], cost, "refund:backend_error")
         await status_msg.edit_text(
             "❌ Ошибка при генерации. Кредиты возвращены."
         )
         await queries.log_generation(
-            db, user["user_id"], prompt, "unknown", "error", None, cost
+            db, user["user_id"], prompt, backend_name, "error", None, cost
         )
         return
 
@@ -105,7 +110,6 @@ async def cmd_generate(
         reply_markup=main_menu_keyboard(),
     )
 
-    backend_name = image_backend.__class__.__name__.replace("Backend", "").lower()
     await queries.log_generation(
         db, user["user_id"], prompt, backend_name, "success", None, cost
     )

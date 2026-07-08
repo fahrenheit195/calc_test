@@ -43,8 +43,10 @@ async def cb_tos_accept(
         return
 
     await queries.set_tos_accepted(db, user["user_id"])
+    # Grant the welcome credits through the daily-refresh path so
+    # last_daily_refresh is stamped and the same day isn't credited twice.
     daily = get_daily_credits(user["tier"])
-    await queries.add_credits(db, user["user_id"], daily, "welcome_bonus")
+    await queries.refresh_daily_credits(db, user["user_id"], daily)
 
     fresh = await queries.get_user(db, user["user_id"])
     await callback.message.edit_text(  # type: ignore[union-attr]

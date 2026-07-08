@@ -82,8 +82,16 @@ async def log_generation(
     await db.commit()
 
 
-async def set_user_tier(db: aiosqlite.Connection, user_id: int, tier: str) -> None:
-    await db.execute("UPDATE users SET tier = ? WHERE user_id = ?", (tier, user_id))
+async def set_user_tier(
+    db: aiosqlite.Connection,
+    user_id: int,
+    tier: str,
+    expires_at: Optional[str] = None,
+) -> None:
+    await db.execute(
+        "UPDATE users SET tier = ?, tier_expires_at = ? WHERE user_id = ?",
+        (tier, expires_at, user_id),
+    )
     await db.commit()
 
 
@@ -104,22 +112,20 @@ async def check_and_increment_rate_limit(
 ) -> bool:
     window_start = int(time.time()) // window * window
     cursor = await db.execute(
-        "SELECT count FROM rate_limit_log WHERE user_id = ? AND window_start = ?",
-        (user_id, window_start),
-    )
-    row = await cursor.fetchone()
-    current = row["count"] if row else 0
-    if current >= max_count:
-        return False
-    await db.execute(
         """
         INSERT INTO rate_limit_log (user_id, window_start, count) VALUES (?, ?, 1)
         ON CONFLICT(user_id, window_start) DO UPDATE SET count = count + 1
+        RETURNING count
         """,
         (user_id, window_start),
     )
+    row = await cursor.fetchone()
+    await db.execute(
+        "DELETE FROM rate_limit_log WHERE window_start < ?",
+        (window_start - window,),
+    )
     await db.commit()
-    return True
+    return row["count"] <= max_count
 
 
 async def get_all_user_ids(db: aiosqlite.Connection) -> list[int]:
@@ -139,9 +145,11 @@ async def get_users_count(db: aiosqlite.Connection) -> int:
 async def get_generation_count(
     db: aiosqlite.Connection, since: datetime
 ) -> int:
+    # SQLite CURRENT_TIMESTAMP stores "YYYY-MM-DD HH:MM:SS" (no "T"),
+    # so the comparison string must use the same format.
     cursor = await db.execute(
         "SELECT COUNT(*) as cnt FROM generations WHERE created_at >= ?",
-        (since.isoformat(),),
+        (since.strftime("%Y-%m-%d %H:%M:%S"),),
     )
     row = await cursor.fetchone()
     return row["cnt"]

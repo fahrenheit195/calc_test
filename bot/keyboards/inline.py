@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from services.subscriptions import CREDIT_PACKS, SUBSCRIPTION_PACKS, TIERS
+from services.subscriptions import CREDIT_PACKS, SUBSCRIPTION_PACKS
 
 
 def tos_keyboard(user_id: int) -> InlineKeyboardMarkup:
@@ -47,14 +47,3 @@ def cancel_keyboard() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="❌ Отмена", callback_data="back_main")
     return builder.as_markup()
-
-
-def tiers_info_text() -> str:
-    lines = ["<b>Тарифные планы:</b>\n"]
-    for key, t in TIERS.items():
-        lines.append(
-            f"{t['emoji']} <b>{t['label']}</b>\n"
-            f"  • Стоимость генерации: {t['generation_cost']} кредитов\n"
-            f"  • Ежедневный бонус: {t['daily_credits']} кредитов\n"
-        )
-    return "\n".join(lines)

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
 
 import aiosqlite
 from aiogram import Router
@@ -26,7 +25,7 @@ router.message.filter(AdminFilter())
 
 @router.message(Command("admin_stats"))
 async def cmd_admin_stats(message: Message, db: aiosqlite.Connection) -> None:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     users_count = await queries.get_users_count(db)
     gens_24h = await queries.get_generation_count(db, now - timedelta(hours=24))
     gens_7d = await queries.get_generation_count(db, now - timedelta(days=7))

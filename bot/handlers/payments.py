@@ -11,15 +11,16 @@ from aiogram.types import (
     SuccessfulPayment,
 )
 
+from datetime import datetime, timedelta, timezone
+
 from db import queries
 from keyboards.inline import buy_credits_keyboard, main_menu_keyboard, subscribe_keyboard
 from services.subscriptions import (
     get_daily_credits,
     get_pack_by_id,
     get_sub_by_id,
-    tiers_info_text,
 )
-from utils.formatting import format_balance
+from utils.formatting import format_balance, tiers_info_text
 
 router = Router(name="payments")
 
@@ -136,7 +137,10 @@ async def successful_payment_handler(
 
     sub = get_sub_by_id(payload)
     if sub:
-        await queries.set_user_tier(db, user["user_id"], sub["tier"])
+        expires = (datetime.now(timezone.utc) + timedelta(days=30)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        await queries.set_user_tier(db, user["user_id"], sub["tier"], expires)
         daily = get_daily_credits(sub["tier"])
         await queries.add_credits(
             db, user["user_id"], daily, f"sub_bonus:{sub['tier']}", charge_id
@@ -144,7 +148,7 @@ async def successful_payment_handler(
         fresh = await queries.get_user(db, user["user_id"])
         await message.answer(
             f"✅ <b>Подписка активирована!</b>\n\n"
-            f"Тариф: <b>{sub['tier'].capitalize()}</b>\n"
+            f"Тариф: <b>{sub['tier'].capitalize()}</b> до {expires[:10]}\n"
             f"Бонус при активации: <b>{daily}</b> кредитов\n\n"
             f"{format_balance(fresh)}",
             reply_markup=main_menu_keyboard(),

@@ -6,9 +6,8 @@ from aiogram.types import Message, CallbackQuery
 import aiosqlite
 
 from db import queries
-from keyboards.inline import main_menu_keyboard, tos_keyboard, tiers_info_text
+from keyboards.inline import main_menu_keyboard, tos_keyboard
 from middlewares.tos_gate import TOS_TEXT
-from services.subscriptions import get_daily_credits
 from utils.formatting import format_balance
 
 router = Router(name="start")

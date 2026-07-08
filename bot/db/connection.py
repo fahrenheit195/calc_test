@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import aiosqlite
@@ -21,8 +20,20 @@ async def create_connection() -> aiosqlite.Connection:
     return db
 
 
+async def _ensure_column(
+    db: aiosqlite.Connection, table: str, column: str, ddl: str
+) -> None:
+    cursor = await db.execute(f"PRAGMA table_info({table})")
+    existing = {row["name"] for row in await cursor.fetchall()}
+    if column not in existing:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+
 async def ensure_schema(db: aiosqlite.Connection) -> None:
     schema_path = Path(__file__).parent / "schema.sql"
     sql = schema_path.read_text(encoding="utf-8")
     await db.executescript(sql)
+    # schema.sql only creates missing tables; bring pre-existing tables up to date
+    await _ensure_column(db, "users", "tier_expires_at", "tier_expires_at TIMESTAMP")
+    await _ensure_column(db, "users", "last_daily_refresh", "last_daily_refresh DATE")
     await db.commit()

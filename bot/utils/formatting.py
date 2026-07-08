@@ -1,15 +1,28 @@
 from __future__ import annotations
 
+import aiosqlite
+
 from services.subscriptions import TIERS
 
 
-def format_balance(user: object) -> str:
-    tier = user["tier"]  # type: ignore[index]
+def format_balance(user: aiosqlite.Row) -> str:
+    tier = user["tier"]
     tier_info = TIERS.get(tier, TIERS["free"])
     return (
-        f"💳 <b>Баланс:</b> {user['credits']} кредитов\n"  # type: ignore[index]
+        f"💳 <b>Баланс:</b> {user['credits']} кредитов\n"
         f"{tier_info['emoji']} <b>Тариф:</b> {tier_info['label']}"
     )
+
+
+def tiers_info_text() -> str:
+    lines = ["<b>Тарифные планы:</b>\n"]
+    for t in TIERS.values():
+        lines.append(
+            f"{t['emoji']} <b>{t['label']}</b>\n"
+            f"  • Стоимость генерации: {t['generation_cost']} кредитов\n"
+            f"  • Ежедневный бонус: {t['daily_credits']} кредитов\n"
+        )
+    return "\n".join(lines)
 
 
 def format_generation_result(credits_remaining: int) -> str:

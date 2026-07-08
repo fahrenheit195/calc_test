@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     username    TEXT,
     tos_accepted_at TIMESTAMP,
     tier        TEXT NOT NULL DEFAULT 'free',
+    tier_expires_at TIMESTAMP,
     credits     INTEGER NOT NULL DEFAULT 0,
     banned_at   TIMESTAMP,
     last_daily_refresh DATE,
