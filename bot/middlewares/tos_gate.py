@@ -5,6 +5,7 @@ from typing import Any, Awaitable, Callable
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message, TelegramObject
 
+from config import config
 from keyboards.inline import tos_keyboard
 
 _EXEMPT_COMMANDS = frozenset({"/start", "/help", "/tos"})
@@ -33,6 +34,10 @@ class ToSGateMiddleware(BaseMiddleware):
     ) -> Any:
         user = data.get("user")
         if not user or user["tos_accepted_at"]:
+            return await handler(event, data)
+
+        # Admins run operational commands without passing the 18+ consent gate.
+        if user["user_id"] in config.ADMIN_IDS:
             return await handler(event, data)
 
         if isinstance(event, Message):
